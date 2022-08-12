@@ -1,0 +1,53 @@
+name: check package
+
+on:
+  workflow_call:
+    inputs:
+      php:
+        default: '["8.1"]'
+        required: true
+        type: string
+    secrets:
+      composerAuthJson:
+        required: true
+
+jobs:
+  check_package:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(inputs.php) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup PHP ${{ matrix.version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.version }}
+          extensions: mbstring, intl, pdo, pdo_mysql, redis, json, dom, curl, libxml
+          coverage: none
+
+      - name: Write composer auth config
+        uses: DamianReeves/write-file-action@v1.0
+        with:
+          path: auth.json
+          contents: ${{ secrets.composerAuthJson }}
+          write-mode: overwrite
+
+      - name: Process Composer Cache
+        id: composer-cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/composer/files
+          key: ${{ runner.os }}-${{ matrix.version }}-composer-${{ github.event.repository.full_name }}-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.version }}-composer-${{ github.event.repository.full_name }}-
+
+      - name: Install Composer packages
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run GrumPHP tasks
+        run: ./vendor/bin/grumphp run --no-interaction --tasks=phpcpd,phplint,phpstan
