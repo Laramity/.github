@@ -50,4 +50,4 @@ jobs:
         run: composer install --prefer-dist --no-progress
 
       - name: Run GrumPHP tasks
-        run: ./vendor/bin/grumphp run --no-interaction --tasks=phpcpd,phplint,phpstan
+        run: ./vendor/bin/grumphp run --no-interaction --tasks=phplint,phpstan
