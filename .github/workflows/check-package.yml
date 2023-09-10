@@ -28,7 +28,7 @@ jobs:
         with:
           php-version: ${{ matrix.version }}
           extensions: mbstring, intl, pdo, pdo_mysql, redis, json, dom, curl, libxml
-          coverage: none
+          coverage: xdebug
 
       - name: Write composer auth config
         uses: DamianReeves/write-file-action@v1.0
@@ -51,3 +51,6 @@ jobs:
 
       - name: Run GrumPHP tasks
         run: ./vendor/bin/grumphp run --no-interaction --tasks=phplint,phpstan
+
+      - name: Execute tests
+        run: ./vendor/bin/pest --coverage
