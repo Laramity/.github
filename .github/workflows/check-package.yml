@@ -31,7 +31,7 @@ jobs:
           coverage: xdebug
 
       - name: Write composer auth config
-        uses: DamianReeves/write-file-action@v1.0
+        uses: DamianReeves/write-file-action@v1.2
         with:
           path: auth.json
           contents: ${{ secrets.composerAuthJson }}
