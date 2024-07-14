@@ -7,6 +7,14 @@ on:
         default: '["8.1"]'
         required: true
         type: string
+      laravel:
+        default: '["10.*"]'
+        required: true
+        type: string
+      dependencyVersion:
+        default: '["prefer-stable"]'
+        required: true
+        type: string
     secrets:
       composerAuthJson:
         required: true
@@ -17,37 +25,47 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(inputs.php) }}
-
+        php: ${{ fromJSON(inputs.php) }}
+        laravel: ${{ fromJSON(inputs.laravel) }}
+        dependency-version: ${{ fromJSON(inputs.dependencyVersion) }}
+        include:
+          - laravel: 11.*
+            testbench: 9.*
+          - laravel: 10.*
+            testbench: 8.*
+        exclude:
+          - laravel: 11.*
+            php: 8.1
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup PHP ${{ matrix.version }}
+      - name: Cache dependencies
+        id: composer-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ github.event.repository.full_name }}-${{ matrix.laravel }}-php-${{ matrix.php }}-${{ hashFiles('composer.json') }}
+
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.version }}
+          php-version: ${{ matrix.php }}
           extensions: mbstring, intl, pdo, pdo_mysql, redis, json, dom, curl, libxml
           coverage: xdebug
 
       - name: Write composer auth config
-        uses: DamianReeves/write-file-action@v1.0
+        uses: DamianReeves/write-file-action@v1.3
         with:
           path: auth.json
           contents: ${{ secrets.composerAuthJson }}
           write-mode: overwrite
 
-      - name: Process Composer Cache
-        id: composer-cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/composer/files
-          key: ${{ runner.os }}-${{ matrix.version }}-composer-${{ github.event.repository.full_name }}-${{ hashFiles('composer.json') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.version }}-composer-${{ github.event.repository.full_name }}-
-
-      - name: Install Composer packages
-        run: composer install --prefer-dist --no-progress
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" "filament/support" --no-interaction --no-update
+          composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
 
       - name: Run GrumPHP tasks
         run: ./vendor/bin/grumphp run --no-interaction --tasks=phplint,phpstan
