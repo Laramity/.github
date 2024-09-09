@@ -62,6 +62,9 @@ jobs:
           contents: ${{ secrets.composerAuthJson }}
           write-mode: overwrite
 
+      - name: Add Laramity composer repository
+        run: composer config repositories.laramity composer https://packagist.laramity.com
+
       - name: Install dependencies
         run: |
           composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
